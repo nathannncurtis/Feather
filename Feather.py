@@ -22,20 +22,33 @@ def process_image(data):
             with Image.open(file_path) as img:
                 img = img.convert('RGB')  # Ensure RGB mode, no alpha channel
 
-                # Resize the image, maintaining aspect ratio and adding white padding
-                img.thumbnail(target_size, Image.LANCZOS)  # Resize the image maintaining aspect ratio
-                new_img = Image.new('RGB', target_size, 'white')  # Create a new white image
+                # Get the DPI of the input image, fallback to 300 if DPI info is not available
+                original_dpi = img.info.get('dpi', (300, 300))[0]
+
+                # Calculate the original print size in inches
+                original_size_inches = (img.width / original_dpi, img.height / original_dpi)
+
+                # Now calculate the target pixel size based on the target DPI of 300
+                target_size_pixels = (int(original_size_inches[0] * 300), int(original_size_inches[1] * 300))
+
+                # Resize the image based on the new target pixel size (to maintain print size at 300 DPI)
+                img = img.resize(target_size_pixels, Image.LANCZOS)
+
+                # Create a new white image with the final target size (8.5x11 at 300 DPI)
+                new_img = Image.new('RGB', target_size, 'white')
+
                 # Calculate position to paste resized image in the center
                 x = (target_size[0] - img.width) // 2
                 y = (target_size[1] - img.height) // 2
                 new_img.paste(img, (x, y))  # Paste resized image onto the white background
 
-                img = new_img
-                img.save(file_path, 'JPEG', dpi=(300, 300))  # Save the image as JPEG with 300 DPI
+                # Save the image with the new DPI of 300
+                new_img.save(file_path, 'JPEG', quality=70, dpi=(300, 300))
 
         return 'success'
     except Exception as e:
         return f'error: {str(e)}'
+
 
 class ImageProcessor(QThread):
     progress = pyqtSignal(int)
@@ -58,8 +71,8 @@ class ImageProcessor(QThread):
         total_files = len(file_paths)
         progress_step = 100 / total_files if total_files > 0 else 100
 
-        # Calculate about 75% of available CPU cores and round to the nearest whole number
-        cores_to_use = round(cpu_count() * 0.75)
+        # Calculate about 65% of available CPU cores and round to the nearest whole number
+        cores_to_use = round(cpu_count() * 0.65)
         
         # Create a multiprocessing pool using about 75% of CPU cores
         with Pool(cores_to_use) as pool:
@@ -219,7 +232,7 @@ class MainWindow(QMainWindow):
             self.close()
 
     def summon_wincopy(self):
-        windows = gw.getWindowsWithTitle('Photocopy Orders: 1 - Default Company Name')
+        windows = gw.getWindowsWithTitle('Photocopy Orders: 1 - Cloud')
         if windows:
             window = windows[0]
             if window.isMinimized or not window.visible:  # Corrected attribute here
