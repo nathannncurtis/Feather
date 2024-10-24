@@ -92,6 +92,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.initUI()
         self.loadSettings()
+        self.force_to_front()
+    
+    def force_to_front(self):
+        self.show()
+        self.raise_()
+        self.activateWindow()
 
     def initUI(self):
         self.setWindowTitle("Feather - A Lightweight Image Optimizer")
