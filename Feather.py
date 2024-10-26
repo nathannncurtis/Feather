@@ -4,87 +4,68 @@ import shutil
 import tempfile
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout,
                              QWidget, QLineEdit, QProgressBar, QMessageBox,
-                             QFileDialog, QDialog, QLabel, QMenuBar, QAction, QCheckBox)
+                             QFileDialog, QDialog, QLabel, QMenuBar, QAction)
 from PyQt5.QtCore import QSettings, QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QIcon
 from PIL import Image
-from multiprocessing import Pool, cpu_count
+import logging
 import pygetwindow as gw
+
+# Set up logging
+logging.basicConfig(
+    filename='app.log',
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s:%(message)s'
+)
 
 settings = QSettings("RonsinPhotocopy", "Feather")
 
 def process_image(data):
     file_path, target_size = data
+    logging.info(f"Processing {file_path}")
 
     try:
-        # Handle JPEG specifically for resizing with aspect ratio preserved and padding
-        if file_path.lower().endswith('.jpeg') or file_path.lower().endswith('.jpg'):
+        if file_path.lower().endswith(('.jpeg', '.jpg')):
             with Image.open(file_path) as img:
-                img = img.convert('RGB')  # Ensure RGB mode, no alpha channel
+                img = img.convert('RGB')
 
-                # Get the DPI of the input image, fallback to 300 if DPI info is not available
                 original_dpi = img.info.get('dpi', (300, 300))[0]
-
-                # Calculate the original print size in inches
                 original_size_inches = (img.width / original_dpi, img.height / original_dpi)
-
-                # Now calculate the target pixel size based on the target DPI of 300
                 target_size_pixels = (int(original_size_inches[0] * 300), int(original_size_inches[1] * 300))
 
-                # Resize the image based on the new target pixel size (to maintain print size at 300 DPI)
                 img = img.resize(target_size_pixels, Image.LANCZOS)
-
-                # Create a new white image with the final target size (8.5x11 at 300 DPI)
                 new_img = Image.new('RGB', target_size, 'white')
 
-                # Calculate position to paste resized image in the center
                 x = (target_size[0] - img.width) // 2
                 y = (target_size[1] - img.height) // 2
-                new_img.paste(img, (x, y))  # Paste resized image onto the white background
+                new_img.paste(img, (x, y))
 
-                # Save the image with the new DPI of 300
                 new_img.save(file_path, 'JPEG', quality=70, dpi=(300, 300))
 
         return 'success'
     except Exception as e:
+        logging.error(f"Error processing {file_path}: {str(e)}")
         return f'error: {str(e)}'
-
 
 class ImageProcessor(QThread):
     progress = pyqtSignal(int)
     finished = pyqtSignal()
 
-    def __init__(self, directory_path, target_size_pixels):
+    def __init__(self, file_paths, target_size_pixels):
         super().__init__()
-        self.directory_path = directory_path
-        self.target_size_pixels = target_size_pixels  # Pixel dimensions
-        self.temp_dir = tempfile.mkdtemp()  # Temporary directory for processing
+        self.file_paths = file_paths
+        self.target_size_pixels = target_size_pixels
 
     def run(self):
-        target_size = self.target_size_pixels  # Directly use pixel dimensions
-
-        # Gather all image file paths in the specified directory
-        file_paths = [os.path.join(dp, f) for dp, _, filenames in os.walk(self.directory_path)
-                      for f in filenames if f.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.tif'))]
-        
-        # Calculate total number of files for progress tracking
-        total_files = len(file_paths)
+        total_files = len(self.file_paths)
         progress_step = 100 / total_files if total_files > 0 else 100
 
-        # Calculate about 65% of available CPU cores and round to the nearest whole number
-        cores_to_use = round(cpu_count() * 0.65)
-        
-        # Create a multiprocessing pool using about 75% of CPU cores
-        with Pool(cores_to_use) as pool:
-            # Process each image using the pool
-            for i, _ in enumerate(pool.imap_unordered(process_image, [(path, target_size) for path in file_paths])):
-                progress_value = int((i + 1) * progress_step)
-                self.progress.emit(progress_value)
-            pool.close()
-            pool.join()
+        for i, file_path in enumerate(self.file_paths):
+            result = process_image((file_path, self.target_size_pixels))
+            logging.info(f"Processed {file_path}: {result}")
+            progress_value = int((i + 1) * progress_step)
+            self.progress.emit(progress_value)
 
-        # Cleanup temporary directory after processing
-        shutil.rmtree(self.temp_dir)
         self.finished.emit()
 
 class MainWindow(QMainWindow):
@@ -158,7 +139,7 @@ class MainWindow(QMainWindow):
 
     def apply_theme(self):
         if self.dark_mode:
-            self.setStyleSheet("""
+            self.setStyleSheet(""" 
                 QMainWindow, QDialog {
                     background-color: #333;
                     color: white;
@@ -185,7 +166,7 @@ class MainWindow(QMainWindow):
                 }
             """)
         else:
-            self.setStyleSheet("""
+            self.setStyleSheet(""" 
                 QMainWindow, QDialog {
                     background-color: #eee;
                     color: black;
@@ -224,11 +205,15 @@ class MainWindow(QMainWindow):
         target_size_pixels = (inches_to_pixels(8.5), inches_to_pixels(11))
         
         self.progress_total.setValue(0)
-        self.processor = ImageProcessor(directory_path, target_size_pixels)
+
+        # Gather file paths for processing
+        file_paths = [os.path.join(dp, f) for dp, _, filenames in os.walk(directory_path)
+                      for f in filenames if f.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.tif'))]
+
+        self.processor = ImageProcessor(file_paths, target_size_pixels)
         self.processor.progress.connect(self.progress_total.setValue)
         self.processor.finished.connect(self.processing_finished)
         self.processor.start()
-
 
     def processing_finished(self):
         QMessageBox.information(self, "Feather is Finished", "All images have been processed.", QMessageBox.Ok)
@@ -241,12 +226,9 @@ class MainWindow(QMainWindow):
         windows = gw.getWindowsWithTitle('Photocopy Orders: 1 - Cloud')
         if windows:
             window = windows[0]
-            if window.isMinimized or not window.visible:  # Corrected attribute here
+            if window.isMinimized or not window.visible:
                 window.restore()
             window.activate()
-        else:
-            pass
-
 
     def close_feather_after_processing(self):
         if self.closeFeatherAction.isChecked():
@@ -270,6 +252,7 @@ class MainWindow(QMainWindow):
         event.accept()
 
 if __name__ == '__main__':
+    logging.info("Starting Feather application.")
     app = QApplication(sys.argv)
     ex = MainWindow()
     ex.show()
