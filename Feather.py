@@ -259,7 +259,7 @@ class MainWindow(QMainWindow):
         about_dialog.setWindowTitle("About Feather - A Lightweight Image Optimizer")
         about_dialog.setFixedSize(300, 200)
         about_dialog_layout = QVBoxLayout()
-        label = QLabel("Feather - A Lightweight Image Optimizer\n\nVersion 2.5 - May 11th, 2024\n© Ronsin Photocopy\nAll rights reserved\n\nUse of this app is exclusive to Ronsin Photocopy\n\nThereby, unlimited copys of this software\nare granted in purpituity\n\nApplication Developer: Nathan Curtis")
+        label = QLabel("Feather - A Lightweight Image Optimizer\n\nVersion 2.5 - October 26th, 2024\n© Ronsin Photocopy\nAll rights reserved\n\nUse of this app is exclusive to Ronsin Photocopy\n\nThereby, unlimited copys of this software\nare granted in purpituity\n\nApplication Developer: Nathan Curtis")
         label.setAlignment(Qt.AlignCenter)
         about_dialog_layout.addWidget(label)
         about_dialog.setLayout(about_dialog_layout)
