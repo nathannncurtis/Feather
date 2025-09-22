@@ -149,7 +149,7 @@ def process_single_image(file_path, target_size):
                 final_img.paste(scaled_img, (x_offset, y_offset))
 
             # Prepare save parameters, preserving original format and compression
-            save_kwargs = {'dpi': (300, 300)}
+            save_kwargs = {'dpi': (200, 200)}
             
             # Preserve format-specific settings
             if original_format == 'JPEG':
@@ -403,7 +403,7 @@ class MainWindow(QMainWindow):
 
     def start_processing(self):
         directory_path = self.input_path.text()
-        dpi = 300
+        dpi = 200
         inches_to_pixels = lambda inches: int(inches * dpi)
         target_size_pixels = (inches_to_pixels(8.5), inches_to_pixels(11))
         
@@ -448,7 +448,7 @@ class MainWindow(QMainWindow):
         about_dialog.setWindowTitle("About Feather - A Lightweight Image Optimizer")
         about_dialog.setFixedSize(300, 200)
         about_dialog_layout = QVBoxLayout()
-        label = QLabel("Feather - A Lightweight Image Optimizer\n\nVersion 2.5 - October 26th, 2024\n© Ronsin Photocopy\nAll rights reserved\n\nUse of this app is exclusive to Ronsin Photocopy\n\nThereby, unlimited copys of this software\nare granted in purpituity\n\nApplication Developer: Nathan Curtis")
+        label = QLabel("Feather - A Lightweight Image Optimizer\n\nVersion 3.0 - July 2, 2025\n© Ronsin Photocopy\nAll rights reserved\n\nUse of this app is exclusive to Ronsin Photocopy\n\nThereby, unlimited copys of this software\nare granted in purpituity\n\nApplication Developer: Nathan Curtis")
         label.setAlignment(Qt.AlignCenter)
         about_dialog_layout.addWidget(label)
         about_dialog.setLayout(about_dialog_layout)
