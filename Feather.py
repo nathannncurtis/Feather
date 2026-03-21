@@ -11,7 +11,6 @@ from PyQt5.QtCore import QSettings, QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QIcon
 from PIL import Image
 import logging
-
 import gc
 
 # Set up logging
@@ -315,11 +314,6 @@ class MainWindow(QMainWindow):
         self.toggleThemeAction.triggered.connect(self.toggle_theme)
         extrasMenu.addAction(self.toggleThemeAction)
 
-        self.removedAction = QAction('removed', self)
-        self.removedAction.setCheckable(True)
-        self.removedAction.triggered.connect(lambda: settings.setValue("removed", self.removedAction.isChecked()))
-        extrasMenu.addAction(self.removedAction)
-
         self.closeFeatherAction = QAction('Close Feather After Processing', self)
         self.closeFeatherAction.setCheckable(True)
         self.closeFeatherAction.triggered.connect(self.close_feather_after_processing)
@@ -331,7 +325,6 @@ class MainWindow(QMainWindow):
 
     def loadSettings(self):
         self.dark_mode = settings.value("darkMode", True, type=bool)
-        self.removedAction.setChecked(settings.value("removed", False, type=bool))
         self.closeFeatherAction.setChecked(settings.value("closeAfterProcessing", False, type=bool))
         self.apply_theme()
 
@@ -424,18 +417,8 @@ class MainWindow(QMainWindow):
 
     def processing_finished(self):
         QMessageBox.information(self, "Feather is Finished", "All images have been processed.", QMessageBox.Ok)
-        if self.removedAction.isChecked():
-            self.removed()
         if self.closeFeatherAction.isChecked():
             self.close()
-
-    def removed(self):
-        windows = gw.getWindowsWithTitle('removed')
-        if windows:
-            window = windows[0]
-            if window.isMinimized or not window.visible:
-                window.restore()
-            window.activate()
 
     def close_feather_after_processing(self):
         if self.closeFeatherAction.isChecked():
@@ -448,7 +431,7 @@ class MainWindow(QMainWindow):
         about_dialog.setWindowTitle("About Feather - A Lightweight Image Optimizer")
         about_dialog.setFixedSize(300, 200)
         about_dialog_layout = QVBoxLayout()
-        label = QLabel("Feather - A Lightweight Image Optimizer\n\nVersion 3.0 - July 2, 2025\n© Nathan Curtis\nAll rights reserved\n\nUse of this app is exclusive to Nathan Curtis\n\nThereby, unlimited copys of this software\nare granted in purpituity\n\nApplication Developer: Nathan Curtis")
+        label = QLabel("Feather - A Lightweight Image Optimizer\n\nVersion 3.0 - July 2, 2025\n\nDeveloped by Nathan Curtis")
         label.setAlignment(Qt.AlignCenter)
         about_dialog_layout.addWidget(label)
         about_dialog.setLayout(about_dialog_layout)
